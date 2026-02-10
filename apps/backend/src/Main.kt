@@ -30,7 +30,7 @@ import kotlin.time.Instant
 fun main(): Unit {
 
     val RouteChangeEvent = jacksonObjectMapper()
-        .writeValueAsString(mapOf("target" to "route", "event" to "change"))
+        .writeValueAsString(mapOf("target" to "routes", "event" to "change"))
 
     val eventbus = MutableSharedFlow<String>()
 
@@ -54,7 +54,12 @@ fun main(): Unit {
         install(CorsPlugin)
         install(WebSockets)
         install(RoutingRoot) {
-            webSocket("/events") { eventbus.collect { send(it) } }
+            webSocket("/events") {
+                eventbus.collect {
+                    println(it)
+                    send(it)
+                }
+            }
             endpoints("/api/{key}", {
                 call.response.header(HttpHeaders.ContentType, "application/json")
                 val key = call.parameters["key"]!!

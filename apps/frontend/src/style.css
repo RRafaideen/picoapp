@@ -1,0 +1,29 @@
+
+html, body {
+  font: 400 24px sans-serif;
+  color: #EEE;
+  background: #111;
+}
+
+nav {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: .4em;
+}
+
+button {
+    color: #111;
+    background: #fad390;
+    padding: .6em .8em;
+    font-weight: bold;
+    border-radius: 3px;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    text-transform: capitalize;
+    transition: .2s ease background;
+}
+
+button:hover {
+    background: #f6b93b;
+}

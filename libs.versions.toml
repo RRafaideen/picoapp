@@ -10,6 +10,7 @@ jackson = "2.21.0"
 
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version = "2.3.0" }
+node = { id = "com.github.node-gradle.node", version = "7.1.0" }
 
 [libraries]
 jackson = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
@@ -22,3 +23,4 @@ ktorWS = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "kt
 ktorSSE = { group = "io.ktor", name = "ktor-server-sse", version.ref = "ktorServer" }
 ktorContentNegociation = { group = "io.ktor", name = "ktor-server-content-negotiation", version.ref = "ktorServer" }
 ktorSerializationJson = { group = "io.ktor", name = "ktor-serialization-kotlinx-json", version.ref = "ktorServer" }
+

@@ -7,6 +7,7 @@
 
 rootProject.name = "picoapp"
 include(":apps:backend")
+include(":apps:frontend")
 
 pluginManagement {
     repositories {

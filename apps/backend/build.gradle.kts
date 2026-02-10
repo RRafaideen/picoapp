@@ -21,13 +21,9 @@ sourceSets {
 dependencies {
     implementation(libs.coroutine)
     implementation(libs.datetime)
-    implementation(libs.json)
     implementation(libs.jackson)
     implementation(libs.ktorCore)
     implementation(libs.ktorNetty)
     implementation(libs.ktorWS)
     implementation(libs.ktorSSE)
-    implementation(libs.ktorContentNegociation)
-    implementation(libs.ktorSerializationJson)
-
 }
