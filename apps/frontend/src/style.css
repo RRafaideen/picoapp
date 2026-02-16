@@ -1,29 +1,73 @@
-
 html, body {
-  font: 400 24px sans-serif;
-  color: #EEE;
-  background: #111;
+  font: 400 18px sans-serif;
 }
 
-nav {
+body, #root {
+    box-sizing: border-box;
+    width: 100dvw;
+    height: 100dvh;
+    margin: 0;
+    overflow: hidden;
+}
+
+#root {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a.completed {
+    color: red;
+}
+a.active {
+    color: green;
+}
+
+.bredcrumbs {
     display: flex;
     flex-flow: row nowrap;
-    gap: .4em;
+    gap: .6em;
 }
 
-button {
-    color: #111;
-    background: #fad390;
-    padding: .6em .8em;
-    font-weight: bold;
-    border-radius: 3px;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    text-transform: capitalize;
-    transition: .2s ease background;
+.scaffold {
+    display: flex;
+    flex-flow: column nowrap;
+    padding: .6em;
+    height: 100%;
 }
 
-button:hover {
-    background: #f6b93b;
+.scaffold,
+.scaffold > .header,
+.scaffold > .footer,
+.scaffold > .content {
+    box-sizing: border-box;
+}
+
+.scaffold > .content { 
+    overflow: auto;
+}
+
+.scaffold > .header {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.debug-bar { 
+    box-sizing: border-box;
+    display: flex;
+    flex-shrink: 0;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-content: center;
+    padding: .6em;
+    background: #222;
+    color: #eee;
+    border: 1px solid black;
 }

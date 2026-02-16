@@ -22,31 +22,29 @@ import io.ktor.server.routing.RoutingRoot
 import io.ktor.server.routing.route
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.WebSocketSession
 import io.ktor.websocket.send
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import java.awt.Dialog
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 fun main(): Unit {
 
-    val RouteChangeEvent = jacksonObjectMapper()
-        .writeValueAsString(mapOf("target" to "routes", "event" to "change"))
+    val eventbus = MutableSharedFlow<Event>()
+    val navigations = mutableMapOf<String, Navigation>()
+    val modals = mutableMapOf<String, Modal>()
 
-    val eventbus = MutableSharedFlow<String>()
+    val navigation = Navigation("default", routes = listOf(
+        NavFragment("first", "/", component = "route:default:page-1"),
+        NavFragment("second", "/second", component = "route:default:page-2"),
+        NavFragment("third", "/third", component = "route:default:page-3"),
+        ))
+    navigations.set("default", navigation)
 
-    val repository = object : Repository<DynRoute> {
-        private val _routes: MutableMap<String, DynRoute> = mutableMapOf()
-        override suspend fun store(vararg routes: DynRoute) {
-            for (route in routes) {
-                val existing = _routes[route.name];
-                if (existing == null) _routes[route.name] = route;
-                else  _routes[route.name] = existing.concat(route);
-            }
-        }
-        override suspend fun list() = _routes.values.toList()
-        override suspend fun delete(name: String) = _routes.remove(name) as Unit
-    }
-
+    val modal = Modal("modal:next-version", mapOf("title" to "A new version is here", "content" to "Do you want to get it ?"))
+    modals.set("modal:next-version", modal)
 
     println("Server starting on http://localhost:8080")
     val server = embeddedServer(Netty, 8080, "0.0.0.0") {
@@ -54,30 +52,15 @@ fun main(): Unit {
         install(CorsPlugin)
         install(WebSockets)
         install(RoutingRoot) {
-            webSocket("/events") {
-                eventbus.collect {
-                    println(it)
-                    send(it)
-                }
-            }
+            webSocket("/events") { handleEvents(eventbus) }
             endpoints("/api/{key}", {
                 call.response.header(HttpHeaders.ContentType, "application/json")
                 val key = call.parameters["key"]!!
                 return@endpoints when (key) {
-                    "route.list" -> {
-                        val routes = repository.list().let { jacksonObjectMapper().writeValueAsString(it) }
-                        call.respond(HttpStatusCode.OK, routes)
-                    }
-                    "route.store" -> {
-                        val route = DynRoute.fromJSON(call.receiveText()) ?: return@endpoints call.respond(HttpStatusCode.BadRequest)
-                        repository.store(route)
-                        eventbus.emit(RouteChangeEvent)
-                        call.respond(HttpStatusCode.NoContent)
-                    }
-                    "route.delete" -> {
-                        eventbus.emit(RouteChangeEvent)
-                        call.respond(HttpStatusCode.NoContent)
-                    }
+                    "navigation.get"   -> navigationGet(navigations)
+                    "navigation.store" -> navigationStore(eventbus, navigations)
+                    "modal.get"        -> modalGet(modals)
+                    "modal.store"      -> modalStore(modals)
                     else -> call.respond(HttpStatusCode.NotFound)
                 }
             })
@@ -122,40 +105,41 @@ fun Route.endpoints(path: String, build: suspend RoutingContext.() -> Unit) =
         }
     }
 
-interface Repository<T> {
-    suspend fun store(vararg items: T): Unit
-    suspend fun list(): List<T>
-    suspend fun delete(id: String): Unit
+sealed class Event(val target: String) {
+    class NavigationChange(val key: String): Event("navigation-change")
+}
+suspend fun WebSocketSession.handleEvents(eventbus: SharedFlow<Event>) {
+    eventbus.collect({
+        val mapper = jacksonObjectMapper()
+        val json = mapper.writeValueAsString(it)
+        send(json)
+    })
 }
 
-interface ToJSON<T> {
-    fun toJSON(element: T): String
+data class Navigation(val key: String, val routes: List<NavFragment> = emptyList())
+data class NavFragment(val name: String, val path: String, val component: String)
+suspend fun RoutingContext.navigationGet(navigations: Map<String, Navigation>) {
+    val key = call.queryParameters["navigation"] ?: return call.respond(HttpStatusCode.BadRequest)
+    val navigation = navigations[key] ?: return call.respond(HttpStatusCode.NotFound)
+    // navigation = navigation.copy(routes = navigation.routes.sortedWith { a, b -> if(a.position > b.position) 1 else -1 })
+    val data = jacksonObjectMapper().writeValueAsString(navigation)
+    call.respond(HttpStatusCode.OK, data)
 }
-interface FromJSON<T> {
-    fun fromJSON(json: String): T?
-}
-
-data class DynRoute(
-    val name: String,
-    val path: String,
-    val component: String,
-    val props: Map<String, Any?> = emptyMap(),
-    val data: Map<String, Any?> = emptyMap()) {
-    fun concat(route: DynRoute): DynRoute {
-        return copy(path = route.path, component = route.component, props = route.props, data = route.data)
-    }
-
-    companion object : FromJSON<DynRoute>, ToJSON<DynRoute> {
-        override fun toJSON(route: DynRoute): String {
-            val mapper = jacksonObjectMapper()
-            return mapper.writeValueAsString(route)
-        }
-
-        override fun fromJSON(json: String): DynRoute? {
-            val mapper = jacksonObjectMapper()
-            return mapper.readValue(json, DynRoute::class.java)
-        }
-    }
+suspend fun RoutingContext.navigationStore(bus: MutableSharedFlow<Event>, navigations: MutableMap<String, Navigation>) {
+    val data = jacksonObjectMapper().readValue(call.receiveText(), Navigation::class.java)
+    navigations.set(data.key, data).also { bus.emit(Event.NavigationChange(data.key)) }
+    call.respond(HttpStatusCode.NoContent)
 }
 
-
+data class Modal(val name: String, val props: Map<String, Any> = emptyMap())
+suspend fun RoutingContext.modalGet(modals: Map<String, Modal>) {
+    val key = call.queryParameters["name"] ?: return call.respond(HttpStatusCode.BadRequest)
+    val dialog = modals[key] ?: return call.respond(HttpStatusCode.NotFound)
+    val data = jacksonObjectMapper().writeValueAsString(dialog)
+    call.respond(HttpStatusCode.OK, data)
+}
+suspend fun RoutingContext.modalStore(modals: MutableMap<String, Modal>) {
+    val data = jacksonObjectMapper().readValue(call.receiveText(), Modal::class.java)
+    modals.set(data.name, data)
+    call.respond(HttpStatusCode.NoContent)
+}

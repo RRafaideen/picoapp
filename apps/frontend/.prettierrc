@@ -1,0 +1,10 @@
+{
+    "bracketSpacing": false,
+    "printWidth": 250,
+    "bracketSameLine": true,
+    "objectWrap": "collapse",
+    "tabWidth": 2,
+    "singleQuote": false,
+    "semi": true,
+    "proseWrap": "never"
+}
